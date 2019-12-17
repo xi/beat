@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sndfile.h>
+#include <math.h>
 
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 
@@ -10,6 +11,7 @@ struct context {
     int frames;
     int buf_cur;
     size_t buf_len;
+    float factor;
     float *buf;
     float *buf2;
 };
@@ -39,9 +41,9 @@ void add_file_at_beat(const char *path, int beat, struct context ctx) {
                 sf_close(sndfile);
                 return;
             } else if (rel_pos >= ctx.buf_len) {
-                ctx.buf2[rel_pos - ctx.buf_len] += fbuf[i];
+                ctx.buf2[rel_pos - ctx.buf_len] += fbuf[i] * ctx.factor;
             } else {
-                ctx.buf[rel_pos] += fbuf[i];
+                ctx.buf[rel_pos] += fbuf[i] * ctx.factor;
             }
         }
     }
@@ -50,8 +52,8 @@ void add_file_at_beat(const char *path, int beat, struct context ctx) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 6 || argc % 2 != 1) {
-        printf("Usage: beat OUTFILE SAMPLERATE FRAMES_PER_BEAT BEATS BEAT INFILE [BEAT INFILE…]\n");
+    if (argc < 6 || argc % 2 != 0) {
+        printf("Usage: beat OUTFILE SAMPLERATE FRAMES_PER_BEAT BEATS TRACKS BEAT INFILE [BEAT INFILE…]\n");
         exit(1);
     }
 
@@ -60,6 +62,7 @@ int main(int argc, char **argv) {
     ctx.samplerate = atoi(argv[2]);
     ctx.frames_per_beat = atoi(argv[3]);
     ctx.frames = atoi(argv[4]) * ctx.frames_per_beat;
+    ctx.factor = 1 / sqrt(atoi(argv[5]));
 
     ctx.buf_len = MIN(ctx.frames / 4, 1 << 18);
     ctx.buf_cur = 0;
@@ -82,7 +85,7 @@ int main(int argc, char **argv) {
 
     SNDFILE *sndfile = sf_open(argv[1], SFM_WRITE, &sfinfo);
 
-    for (int i = 5; i + 1 < argc; i += 2) {
+    for (int i = 6; i + 1 < argc; i += 2) {
         int beat = atoi(argv[i]);
         char *path = argv[i + 1];
 
