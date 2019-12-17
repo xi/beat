@@ -7,3 +7,6 @@ build/beat.flac: Makefile beat src/bumm.flac src/tack.flac
 
 beat: beat.c Makefile
 	gcc -lm -lsndfile $< -o $@
+
+%_mono.flac: %.flac
+	ffmpeg -i "$<" -ac 1 "$@"
