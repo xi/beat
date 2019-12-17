@@ -6,3 +6,9 @@ build/beat.flac: Makefile beat src/bumm.flac src/tack.flac
 
 beat: beat.c Makefile
 	gcc -lm -lsndfile $< -o $@
+
+%_voice.flac: %.flac Makefile
+	sox $< $@ contrast norm
+
+B.flac: B.beat Makefile beat $(shell grep -o '~.*flac' B.beat | sort | uniq)
+	./beat $@ $(shell cat $<)
