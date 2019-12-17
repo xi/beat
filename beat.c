@@ -53,14 +53,14 @@ void add_file_at_beat(const char *path, int beat, struct context ctx) {
 
 int main(int argc, char **argv) {
     if (argc < 6 || argc % 2 != 0) {
-        printf("Usage: beat OUTFILE SAMPLERATE FRAMES_PER_BEAT BEATS TRACKS BEAT INFILE [BEAT INFILE…]\n");
+        printf("Usage: beat OUTFILE SAMPLERATE BPM BEATS TRACKS BEAT INFILE [BEAT INFILE…]\n");
         exit(1);
     }
 
     struct context ctx;
 
     ctx.samplerate = atoi(argv[2]);
-    ctx.frames_per_beat = atoi(argv[3]);
+    ctx.frames_per_beat = ctx.samplerate * 60 / atoi(argv[3]);
     ctx.frames = atoi(argv[4]) * ctx.frames_per_beat;
     ctx.factor = 1 / sqrt(atoi(argv[5]));
 
