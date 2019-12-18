@@ -4,9 +4,10 @@
 #include <math.h>
 
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define BUFSIZE (1 << 18)
 
 struct context {
-    float *buf;
+    float buf[BUFSIZE];
     struct context *next;
 };
 
@@ -14,14 +15,13 @@ int samplerate;
 int frames_per_beat;  // samplerate * 60 / bpm
 int frames;
 int buf_cur;
-size_t buf_len;
 float factor;
 struct context *ctx;
 
 void add_file_at_beat(const char *path, int beat) {
     int ibs = 1024;
     int pos = beat * frames_per_beat;
-    int rel_pos = pos - buf_cur * buf_len;
+    int rel_pos = pos - buf_cur * BUFSIZE;
     float fbuf[ibs];
     SF_INFO sfinfo;
     SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
@@ -38,12 +38,12 @@ void add_file_at_beat(const char *path, int beat) {
         for (int i = 0; i < count; ++i) {
             pos += 1;
             rel_pos += 1;
-            if (rel_pos >= 2 * buf_len) {
+            if (rel_pos >= 2 * BUFSIZE) {
                 printf("dropping %s at %i\n", path, pos);
                 sf_close(infile);
                 return;
-            } else if (rel_pos >= buf_len) {
-                ctx->next->buf[rel_pos - buf_len] += fbuf[i] * factor;
+            } else if (rel_pos >= BUFSIZE) {
+                ctx->next->buf[rel_pos - BUFSIZE] += fbuf[i] * factor;
             } else {
                 ctx->buf[rel_pos] += fbuf[i] * factor;
             }
@@ -54,7 +54,7 @@ void add_file_at_beat(const char *path, int beat) {
 }
 
 int _sf_writef_float(SNDFILE *sndfile, float *buf) {
-    int size = MIN(frames - buf_cur * buf_len, buf_len);
+    int size = MIN(frames - buf_cur * BUFSIZE, BUFSIZE);
     if (size <= 0) {
         return 0;
     }
@@ -72,18 +72,13 @@ int main(int argc, char **argv) {
     frames = atoi(argv[4]) * frames_per_beat;
     factor = 1 / sqrt(atoi(argv[5]));
 
-    buf_len = MIN(frames / 4, 1 << 18);
     buf_cur = 0;
 
     ctx = (struct context *)malloc(sizeof(struct context));
-    float buf[buf_len];
-    memset(buf, 0, buf_len * sizeof(float));
-    ctx->buf = buf;
+    memset(ctx->buf, 0, BUFSIZE * sizeof(float));
 
     ctx->next = (struct context *)malloc(sizeof(struct context));
-    float buf2[buf_len];
-    memset(buf2, 0, buf_len * sizeof(float));
-    ctx->next->buf = buf2;
+    memset(ctx->next->buf, 0, BUFSIZE * sizeof(float));
     ctx->next->next = ctx;
 
     SF_INFO sfinfo;
@@ -100,9 +95,9 @@ int main(int argc, char **argv) {
         int beat = atoi(argv[i]);
         char *path = argv[i + 1];
 
-        while (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
+        while (beat * frames_per_beat >= (buf_cur + 1) * BUFSIZE) {
             _sf_writef_float(outfile, ctx->buf);
-            memset(ctx->buf, 0, buf_len * sizeof(float));
+            memset(ctx->buf, 0, BUFSIZE * sizeof(float));
 
             ctx = ctx->next;
             buf_cur += 1;
