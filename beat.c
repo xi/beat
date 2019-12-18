@@ -48,6 +48,10 @@ void add_file_at_beat(const char *path, int beat) {
             rel_pos += 1;
             while (rel_pos >= BUFSIZE) {
                 rel_pos -= BUFSIZE;
+                if (curctx->next == ctx) {
+                    curctx->next = create_context();
+                    curctx->next->next = ctx;
+                }
                 curctx = curctx->next;
             }
             curctx->buf[rel_pos] += fbuf[i] * factor;
@@ -79,8 +83,7 @@ int main(int argc, char **argv) {
     buf_cur = 0;
 
     ctx = create_context();
-    ctx->next = create_context();
-    ctx->next->next = ctx;
+    ctx->next = ctx;
 
     SF_INFO sfinfo;
     sfinfo.channels = 1;
