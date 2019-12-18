@@ -24,13 +24,13 @@ void add_file_at_beat(const char *path, int beat) {
     int rel_pos = pos - buf_cur * buf_len;
     float fbuf[ibs];
     SF_INFO sfinfo;
-    SNDFILE *sndfile = sf_open(path, SFM_READ, &sfinfo);
+    SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
 
     // assert sfinfo.samplerate == samplerate
     // assert sfinfo.channels == 1
 
     while (1) {
-        int count = sf_readf_float(sndfile, fbuf, ibs);
+        int count = sf_readf_float(infile, fbuf, ibs);
         count = MIN(count, frames - pos - 1);
 
         if (count <= 0) break;
@@ -40,7 +40,7 @@ void add_file_at_beat(const char *path, int beat) {
             rel_pos += 1;
             if (rel_pos >= 2 * buf_len) {
                 printf("dropping %s at %i\n", path, pos);
-                sf_close(sndfile);
+                sf_close(infile);
                 return;
             } else if (rel_pos >= buf_len) {
                 ctx.buf2[rel_pos - buf_len] += fbuf[i] * factor;
@@ -50,7 +50,7 @@ void add_file_at_beat(const char *path, int beat) {
         }
     }
 
-    sf_close(sndfile);
+    sf_close(infile);
 }
 
 int main(int argc, char **argv) {
@@ -83,14 +83,14 @@ int main(int argc, char **argv) {
     sfinfo.sections = 1;
     sfinfo.seekable = 1;
 
-    SNDFILE *sndfile = sf_open(argv[1], SFM_WRITE, &sfinfo);
+    SNDFILE *outfile = sf_open(argv[1], SFM_WRITE, &sfinfo);
 
     for (int i = 6; i + 1 < argc; i += 2) {
         int beat = atoi(argv[i]);
         char *path = argv[i + 1];
 
         if (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
-            sf_writef_float(sndfile, ctx.buf, buf_len);
+            sf_writef_float(outfile, ctx.buf, buf_len);
             memset(ctx.buf, 0, buf_len * sizeof(float));
 
             float *tmp = ctx.buf;
@@ -104,11 +104,11 @@ int main(int argc, char **argv) {
 
     int rest = frames - buf_cur * buf_len;
     if (rest > buf_len) {
-        sf_writef_float(sndfile, ctx.buf, buf_len);
-        sf_writef_float(sndfile, ctx.buf2, rest - buf_len);
+        sf_writef_float(outfile, ctx.buf, buf_len);
+        sf_writef_float(outfile, ctx.buf2, rest - buf_len);
     } else {
-        sf_writef_float(sndfile, ctx.buf, rest);
+        sf_writef_float(outfile, ctx.buf, rest);
     }
 
-    sf_close(sndfile);
+    sf_close(outfile);
 }
