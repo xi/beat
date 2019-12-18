@@ -26,6 +26,8 @@ void add_file_at_beat(const char *path, int beat) {
     SF_INFO sfinfo;
     SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
 
+    struct context *curctx = ctx;
+
     // assert sfinfo.samplerate == samplerate
     // assert sfinfo.channels == 1
 
@@ -38,15 +40,11 @@ void add_file_at_beat(const char *path, int beat) {
         for (int i = 0; i < count; ++i) {
             pos += 1;
             rel_pos += 1;
-            if (rel_pos >= 2 * BUFSIZE) {
-                printf("dropping %s at %i\n", path, pos);
-                sf_close(infile);
-                return;
-            } else if (rel_pos >= BUFSIZE) {
-                ctx->next->buf[rel_pos - BUFSIZE] += fbuf[i] * factor;
-            } else {
-                ctx->buf[rel_pos] += fbuf[i] * factor;
+            while (rel_pos >= BUFSIZE) {
+                rel_pos -= BUFSIZE;
+                curctx = curctx->next;
             }
+            curctx->buf[rel_pos] += fbuf[i] * factor;
         }
     }
 
