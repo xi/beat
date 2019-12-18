@@ -21,6 +21,7 @@ struct context ctx;
 void add_file_at_beat(const char *path, int beat) {
     int ibs = 1024;
     int pos = beat * frames_per_beat;
+    int rel_pos = pos - buf_cur * buf_len;
     float fbuf[ibs];
     SF_INFO sfinfo;
     SNDFILE *sndfile = sf_open(path, SFM_READ, &sfinfo);
@@ -31,7 +32,6 @@ void add_file_at_beat(const char *path, int beat) {
     while (1) {
         int count = sf_readf_float(sndfile, fbuf, ibs);
         count = MIN(count, frames - pos - 1);
-        int rel_pos = pos - buf_cur * buf_len;
 
         if (count <= 0) break;
 
