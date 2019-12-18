@@ -7,7 +7,7 @@
 #define BUFSIZE (1 << 12)
 
 struct ring {
-    float buf[BUFSIZE];
+    float buf[BUFSIZE * 2];
     struct ring *next;
 };
 
@@ -20,7 +20,7 @@ struct ring *first;
 
 struct ring *create_ring(void) {
     struct ring *c = (struct ring *)malloc(sizeof(struct ring));
-    memset(c->buf, 0, BUFSIZE * sizeof(float));
+    memset(c->buf, 0, BUFSIZE * 2 * sizeof(float));
     return c;
 }
 
@@ -54,7 +54,8 @@ void add_file_at_beat(const char *path, int beat) {
                 }
                 cur = cur->next;
             }
-            cur->buf[rel_pos] += fbuf[i] * factor;
+            cur->buf[rel_pos * 2] += fbuf[i] * factor;
+            cur->buf[rel_pos * 2 + 1] += fbuf[i] * factor;
         }
     }
 
@@ -86,7 +87,7 @@ int main(int argc, char **argv) {
     first->next = first;
 
     SF_INFO sfinfo;
-    sfinfo.channels = 1;
+    sfinfo.channels = 2;
     sfinfo.format = SF_FORMAT_FLAC | SF_FORMAT_PCM_16;
     sfinfo.frames = frames;
     sfinfo.samplerate = samplerate;
@@ -101,7 +102,7 @@ int main(int argc, char **argv) {
 
         while (beat * frames_per_beat >= (buf_cur + 1) * BUFSIZE) {
             _sf_writef_float(outfile, first->buf);
-            memset(first->buf, 0, BUFSIZE * sizeof(float));
+            memset(first->buf, 0, BUFSIZE * 2 * sizeof(float));
 
             first = first->next;
             buf_cur += 1;
