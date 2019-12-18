@@ -4,7 +4,7 @@
 #include <math.h>
 
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
-#define BUFSIZE (1 << 18)
+#define BUFSIZE (1 << 12)
 
 struct context {
     float buf[BUFSIZE];
