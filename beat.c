@@ -106,10 +106,18 @@ int main(int argc, char **argv) {
         add_file_at_beat(path, beat);
     }
 
-    _sf_writef_float(outfile, ctx->buf);
-    _sf_writef_float(outfile, ctx->next->buf);
+    struct context *last = ctx;
+    while (last->next != ctx) {
+        last = last->next;
+    }
+    last->next = NULL;
 
-    free(ctx->next);
-    free(ctx);
+    while (ctx) {
+        struct context *tmp = ctx;
+        _sf_writef_float(outfile, tmp->buf);
+        ctx = tmp->next;
+        free(tmp);
+    }
+
     sf_close(outfile);
 }
