@@ -18,6 +18,12 @@ int buf_cur;
 float factor;
 struct context *ctx;
 
+struct context *create_context(void) {
+    struct context *c = (struct context *)malloc(sizeof(struct context));
+    memset(c->buf, 0, BUFSIZE * sizeof(float));
+    return c;
+}
+
 void add_file_at_beat(const char *path, int beat) {
     int ibs = 1024;
     int pos = beat * frames_per_beat;
@@ -72,11 +78,8 @@ int main(int argc, char **argv) {
 
     buf_cur = 0;
 
-    ctx = (struct context *)malloc(sizeof(struct context));
-    memset(ctx->buf, 0, BUFSIZE * sizeof(float));
-
-    ctx->next = (struct context *)malloc(sizeof(struct context));
-    memset(ctx->next->buf, 0, BUFSIZE * sizeof(float));
+    ctx = create_context();
+    ctx->next = create_context();
     ctx->next->next = ctx;
 
     SF_INFO sfinfo;
