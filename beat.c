@@ -53,6 +53,14 @@ void add_file_at_beat(const char *path, int beat) {
     sf_close(infile);
 }
 
+int _sf_writef_float(SNDFILE *sndfile, float *buf) {
+    int size = MIN(frames - buf_cur * buf_len, buf_len);
+    if (size <= 0) {
+        return 0;
+    }
+    return sf_writef_float(sndfile, buf, size);
+}
+
 int main(int argc, char **argv) {
     if (argc < 6 || argc % 2 != 0) {
         printf("Usage: beat OUTFILE SAMPLERATE BPM BEATS TRACKS BEAT INFILE [BEAT INFILE…]\n");
@@ -90,7 +98,7 @@ int main(int argc, char **argv) {
         char *path = argv[i + 1];
 
         while (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
-            sf_writef_float(outfile, ctx.buf, buf_len);
+            _sf_writef_float(outfile, ctx.buf);
             memset(ctx.buf, 0, buf_len * sizeof(float));
 
             float *tmp = ctx.buf;
@@ -102,13 +110,8 @@ int main(int argc, char **argv) {
         add_file_at_beat(path, beat);
     }
 
-    int rest = frames - buf_cur * buf_len;
-    if (rest > buf_len) {
-        sf_writef_float(outfile, ctx.buf, buf_len);
-        sf_writef_float(outfile, ctx.buf2, rest - buf_len);
-    } else {
-        sf_writef_float(outfile, ctx.buf, rest);
-    }
+    _sf_writef_float(outfile, ctx.buf);
+    _sf_writef_float(outfile, ctx.next->buf);
 
     sf_close(outfile);
 }
