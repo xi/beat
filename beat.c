@@ -6,9 +6,9 @@
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define BUFSIZE (1 << 12)
 
-struct context {
+struct ring {
     float buf[BUFSIZE];
-    struct context *next;
+    struct ring *next;
 };
 
 int samplerate;
@@ -16,10 +16,10 @@ int frames_per_beat;  // samplerate * 60 / bpm
 int frames;
 int buf_cur;
 float factor;
-struct context *ctx;
+struct ring *first;
 
-struct context *create_context(void) {
-    struct context *c = (struct context *)malloc(sizeof(struct context));
+struct ring *create_ring(void) {
+    struct ring *c = (struct ring *)malloc(sizeof(struct ring));
     memset(c->buf, 0, BUFSIZE * sizeof(float));
     return c;
 }
@@ -32,7 +32,7 @@ void add_file_at_beat(const char *path, int beat) {
     SF_INFO sfinfo;
     SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
 
-    struct context *curctx = ctx;
+    struct ring *cur = first;
 
     // assert sfinfo.samplerate == samplerate
     // assert sfinfo.channels == 1
@@ -48,13 +48,13 @@ void add_file_at_beat(const char *path, int beat) {
             rel_pos += 1;
             while (rel_pos >= BUFSIZE) {
                 rel_pos -= BUFSIZE;
-                if (curctx->next == ctx) {
-                    curctx->next = create_context();
-                    curctx->next->next = ctx;
+                if (cur->next == first) {
+                    cur->next = create_ring();
+                    cur->next->next = first;
                 }
-                curctx = curctx->next;
+                cur = cur->next;
             }
-            curctx->buf[rel_pos] += fbuf[i] * factor;
+            cur->buf[rel_pos] += fbuf[i] * factor;
         }
     }
 
@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
 
     buf_cur = 0;
 
-    ctx = create_context();
-    ctx->next = ctx;
+    first = create_ring();
+    first->next = first;
 
     SF_INFO sfinfo;
     sfinfo.channels = 1;
@@ -100,26 +100,26 @@ int main(int argc, char **argv) {
         char *path = argv[i + 1];
 
         while (beat * frames_per_beat >= (buf_cur + 1) * BUFSIZE) {
-            _sf_writef_float(outfile, ctx->buf);
-            memset(ctx->buf, 0, BUFSIZE * sizeof(float));
+            _sf_writef_float(outfile, first->buf);
+            memset(first->buf, 0, BUFSIZE * sizeof(float));
 
-            ctx = ctx->next;
+            first = first->next;
             buf_cur += 1;
         }
 
         add_file_at_beat(path, beat);
     }
 
-    struct context *last = ctx;
-    while (last->next != ctx) {
+    struct ring *last = first;
+    while (last->next != first) {
         last = last->next;
     }
     last->next = NULL;
 
-    while (ctx) {
-        struct context *tmp = ctx;
+    while (first) {
+        struct ring *tmp = first;
         _sf_writef_float(outfile, tmp->buf);
-        ctx = tmp->next;
+        first = tmp->next;
         free(tmp);
     }
 
