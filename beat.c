@@ -25,17 +25,17 @@ struct ring *create_ring(void) {
 }
 
 void add_file_at_beat(const char *path, int beat) {
+    SF_INFO sfinfo;
+    SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
+
     int ibs = 1024;
     int pos = beat * frames_per_beat;
     int rel_pos = pos - buf_cur * BUFSIZE;
-    float fbuf[ibs];
-    SF_INFO sfinfo;
-    SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
+    float fbuf[ibs * sfinfo.channels];
 
     struct ring *cur = first;
 
     // assert sfinfo.samplerate == samplerate
-    // assert sfinfo.channels == 1
 
     while (1) {
         int count = sf_readf_float(infile, fbuf, ibs);
@@ -54,8 +54,13 @@ void add_file_at_beat(const char *path, int beat) {
                 }
                 cur = cur->next;
             }
-            cur->buf[rel_pos * 2] += fbuf[i] * factor;
-            cur->buf[rel_pos * 2 + 1] += fbuf[i] * factor;
+            if (sfinfo.channels == 1) {
+                cur->buf[rel_pos * 2] += fbuf[i] * factor;
+                cur->buf[rel_pos * 2 + 1] += fbuf[i] * factor;
+            } else {
+                cur->buf[rel_pos * 2] += fbuf[i * 2] * factor;
+                cur->buf[rel_pos * 2 + 1] += fbuf[i * 2 + 1] * factor;
+            }
         }
     }
 
