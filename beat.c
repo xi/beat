@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
         int beat = atoi(argv[i]);
         char *path = argv[i + 1];
 
-        if (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
+        while (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
             sf_writef_float(outfile, ctx.buf, buf_len);
             memset(ctx.buf, 0, buf_len * sizeof(float));
 
