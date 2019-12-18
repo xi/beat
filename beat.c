@@ -7,7 +7,7 @@
 
 struct context {
     float *buf;
-    float *buf2;
+    struct context *next;
 };
 
 int samplerate;
@@ -16,7 +16,7 @@ int frames;
 int buf_cur;
 size_t buf_len;
 float factor;
-struct context ctx;
+struct context *ctx;
 
 void add_file_at_beat(const char *path, int beat) {
     int ibs = 1024;
@@ -43,9 +43,9 @@ void add_file_at_beat(const char *path, int beat) {
                 sf_close(infile);
                 return;
             } else if (rel_pos >= buf_len) {
-                ctx.buf2[rel_pos - buf_len] += fbuf[i] * factor;
+                ctx->next->buf[rel_pos - buf_len] += fbuf[i] * factor;
             } else {
-                ctx.buf[rel_pos] += fbuf[i] * factor;
+                ctx->buf[rel_pos] += fbuf[i] * factor;
             }
         }
     }
@@ -75,13 +75,16 @@ int main(int argc, char **argv) {
     buf_len = MIN(frames / 4, 1 << 18);
     buf_cur = 0;
 
+    ctx = (struct context *)malloc(sizeof(struct context));
     float buf[buf_len];
     memset(buf, 0, buf_len * sizeof(float));
-    ctx.buf = buf;
+    ctx->buf = buf;
 
+    ctx->next = (struct context *)malloc(sizeof(struct context));
     float buf2[buf_len];
     memset(buf2, 0, buf_len * sizeof(float));
-    ctx.buf2 = buf2;
+    ctx->next->buf = buf2;
+    ctx->next->next = ctx;
 
     SF_INFO sfinfo;
     sfinfo.channels = 1;
@@ -98,20 +101,20 @@ int main(int argc, char **argv) {
         char *path = argv[i + 1];
 
         while (beat * frames_per_beat >= (buf_cur + 1) * buf_len) {
-            _sf_writef_float(outfile, ctx.buf);
-            memset(ctx.buf, 0, buf_len * sizeof(float));
+            _sf_writef_float(outfile, ctx->buf);
+            memset(ctx->buf, 0, buf_len * sizeof(float));
 
-            float *tmp = ctx.buf;
-            ctx.buf = ctx.buf2;
-            ctx.buf2 = tmp;
+            ctx = ctx->next;
             buf_cur += 1;
         }
 
         add_file_at_beat(path, beat);
     }
 
-    _sf_writef_float(outfile, ctx.buf);
-    _sf_writef_float(outfile, ctx.next->buf);
+    _sf_writef_float(outfile, ctx->buf);
+    _sf_writef_float(outfile, ctx->next->buf);
 
+    free(ctx->next);
+    free(ctx);
     sf_close(outfile);
 }
