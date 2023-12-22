@@ -1,2 +1,5 @@
+CFLAGS = -std=c99 -Wall -O2 `pkg-config --cflags sndfile`
+LDFLAGS = -s -lm `pkg-config --libs sndfile`
+
 beat: beat.c
-	gcc -lm -lsndfile $< -o $@
+	gcc $< -o $@ ${CFLAGS} ${LDFLAGS}
