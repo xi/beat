@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
-#include <sndfile.h>
+#include <assert.h>
 #include <math.h>
+#include <sndfile.h>
 
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define BUFSIZE (1 << 12)
@@ -35,7 +36,7 @@ void add_file_at_beat(const char *path, int beat) {
 
     struct ring *cur = first;
 
-    // assert sfinfo.samplerate == samplerate
+    assert(sfinfo.samplerate == samplerate);
 
     while (1) {
         int count = sf_readf_float(infile, fbuf, ibs);
