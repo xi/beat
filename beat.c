@@ -29,8 +29,19 @@ void add_file_at_beat(const char *path, int beat) {
     SF_INFO sfinfo;
     SNDFILE *infile = sf_open(path, SFM_READ, &sfinfo);
 
+    if (infile == NULL) {
+        printf("ERROR: Could not open file: %s\n", path);
+        exit(1);
+    }
+
     int ibs = 1024;
     int pos = beat * frames_per_beat;
+
+    if (pos < buf_cur * BUFSIZE) {
+        printf("ERROR: beat is smaller than previous: %i\n", beat);
+        exit(1);
+    }
+
     int rel_pos = pos - buf_cur * BUFSIZE;
     float fbuf[ibs * sfinfo.channels];
 
