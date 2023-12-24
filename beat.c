@@ -138,6 +138,7 @@ int main(int argc, char **argv) {
         struct ring *tmp = first;
         _sf_writef_float(outfile, tmp->buf);
         first = tmp->next;
+        buf_cur += 1;
         free(tmp);
     }
 
