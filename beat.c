@@ -79,11 +79,22 @@ void add_file_at_beat(const char *path, int beat) {
     sf_close(infile);
 }
 
+void clip(float *buf) {
+    for (int i = 0; i < BUFSIZE * 2; i++) {
+        if (buf[i] < -1.0) {
+            buf[i] = -1.0;
+        } else if (buf[i] > 1.0) {
+            buf[i] = 1.0;
+        }
+    }
+}
+
 int _sf_writef_float(SNDFILE *sndfile, float *buf) {
     int size = MIN(frames - buf_cur * BUFSIZE, BUFSIZE);
     if (size <= 0) {
         return 0;
     }
+    clip(buf);
     return sf_writef_float(sndfile, buf, size);
 }
 
